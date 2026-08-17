@@ -1,10 +1,13 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Scaffold, AppBar, ListView;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/api/api_exception.dart';
+import '../../core/localization/app_strings.dart';
 import '../../core/providers.dart';
 import '../../models/saved_url.dart';
 import '../../widgets/empty_state.dart';
@@ -57,27 +60,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: TextField(
+        title: ShadInput(
           controller: _controller,
           autofocus: false,
           onChanged: _onChanged,
-          decoration: const InputDecoration(
-            hintText: 'Search your saved items',
-            border: InputBorder.none,
-          ),
+          leading: const Icon(LucideIcons.search, size: 18),
+          placeholder: Text(s.searchPlaceholder),
         ),
       ),
       body: switch (_result) {
         AsyncData(:final value) => _query.trim().isEmpty
-            ? const EmptyState(
-                icon: Icons.search,
-                title: 'Search your library',
-                subtitle: 'Full-text search across everything you\'ve saved.',
+            ? EmptyState(
+                icon: LucideIcons.search,
+                title: s.searchLibraryTitle,
+                subtitle: s.searchLibrarySubtitle,
               )
             : value.isEmpty
-                ? const EmptyState(icon: Icons.search_off, title: 'No results')
+                ? EmptyState(icon: LucideIcons.searchX, title: s.noResults)
                 : ListView.builder(
                     itemCount: value.length,
                     itemBuilder: (context, index) {

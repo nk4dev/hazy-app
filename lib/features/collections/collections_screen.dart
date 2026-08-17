@@ -1,7 +1,19 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'
+    show
+        Scaffold,
+        AppBar,
+        FloatingActionButton,
+        RefreshIndicator,
+        ListView,
+        Dismissible,
+        DismissDirection,
+        ListTile;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../core/localization/app_strings.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/loading_view.dart';
@@ -11,26 +23,30 @@ class CollectionsScreen extends ConsumerWidget {
   const CollectionsScreen({super.key});
 
   Future<void> _createCollection(BuildContext context, WidgetRef ref) async {
+    final s = AppStrings.of(context);
     final nameController = TextEditingController();
-    final name = await showDialog<String>(
+    final name = await showShadDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New collection'),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Name'),
-        ),
+      builder: (context) => ShadDialog(
+        title: Text(s.newCollection),
         actions: [
-          TextButton(
+          ShadButton.outline(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(s.cancel),
           ),
-          FilledButton(
+          ShadButton(
             onPressed: () => Navigator.of(context).pop(nameController.text.trim()),
-            child: const Text('Create'),
+            child: Text(s.create),
           ),
         ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: ShadInput(
+            controller: nameController,
+            autofocus: true,
+            placeholder: Text(s.nameFieldPlaceholder),
+          ),
+        ),
       ),
     );
     if (name == null || name.isEmpty) return;
@@ -40,23 +56,25 @@ class CollectionsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(collectionsProvider);
+    final theme = ShadTheme.of(context);
+    final s = AppStrings.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Collections')),
+      appBar: AppBar(title: Text(s.collectionsTitle)),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _createCollection(context, ref),
-        child: const Icon(Icons.create_new_folder_outlined),
+        child: const Icon(LucideIcons.folderPlus),
       ),
       body: switch (state) {
         AsyncData(:final value) => value.isEmpty
             ? EmptyState(
-                icon: Icons.folder_outlined,
-                title: 'No collections yet',
-                subtitle: 'Group related saved links together.',
-                action: FilledButton.icon(
+                icon: LucideIcons.folder,
+                title: s.emptyCollectionsTitle,
+                subtitle: s.emptyCollectionsSubtitle,
+                action: ShadButton(
                   onPressed: () => _createCollection(context, ref),
-                  icon: const Icon(Icons.create_new_folder_outlined),
-                  label: const Text('New collection'),
+                  leading: const Icon(LucideIcons.folderPlus),
+                  child: Text(s.newCollection),
                 ),
               )
             : RefreshIndicator(
@@ -69,17 +87,20 @@ class CollectionsScreen extends ConsumerWidget {
                       key: ValueKey(collection.id),
                       direction: DismissDirection.endToStart,
                       background: Container(
-                        color: Theme.of(context).colorScheme.errorContainer,
+                        color: theme.colorScheme.destructive,
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: const Icon(Icons.delete_outline),
+                        child: Icon(
+                          LucideIcons.trash2,
+                          color: theme.colorScheme.destructiveForeground,
+                        ),
                       ),
                       onDismissed: (_) =>
                           ref.read(collectionsProvider.notifier).delete(collection.id),
                       child: ListTile(
-                        leading: const Icon(Icons.folder_outlined),
+                        leading: const Icon(LucideIcons.folder),
                         title: Text(collection.name),
-                        subtitle: Text('${collection.itemCount} items'),
+                        subtitle: Text(s.itemsCount(collection.itemCount)),
                         onTap: () => context.push('/library/collections/${collection.id}'),
                       ),
                     );

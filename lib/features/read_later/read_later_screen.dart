@@ -1,7 +1,17 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'
+    show
+        Scaffold,
+        AppBar,
+        RefreshIndicator,
+        ListView,
+        PopupMenuButton,
+        PopupMenuItem;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../core/localization/app_strings.dart';
 import '../../models/saved_url.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_view.dart';
@@ -14,23 +24,24 @@ class ReadLaterScreen extends ConsumerWidget {
   const ReadLaterScreen({super.key});
 
   Widget _statusMenu(BuildContext context, WidgetRef ref, String itemId) {
+    final s = AppStrings.of(context);
     return PopupMenuButton<ReadLaterStatus>(
-      icon: const Icon(Icons.more_vert),
+      icon: const Icon(LucideIcons.ellipsisVertical),
       onSelected: (status) async {
         try {
           await ref.read(readLaterQueueProvider.notifier).setStatus(itemId, status);
         } catch (_) {
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Could not update this item.')),
+            ShadToaster.of(context).show(
+              ShadToast.destructive(description: Text(s.couldNotUpdateItem)),
             );
           }
         }
       },
-      itemBuilder: (context) => const [
-        PopupMenuItem(value: ReadLaterStatus.read, child: Text('Mark as read')),
-        PopupMenuItem(value: ReadLaterStatus.archived, child: Text('Archive')),
-        PopupMenuItem(value: ReadLaterStatus.inbox, child: Text('Back to inbox')),
+      itemBuilder: (context) => [
+        PopupMenuItem(value: ReadLaterStatus.read, child: Text(s.markAsRead)),
+        PopupMenuItem(value: ReadLaterStatus.archived, child: Text(s.archive)),
+        PopupMenuItem(value: ReadLaterStatus.inbox, child: Text(s.backToInbox)),
       ],
     );
   }
@@ -42,13 +53,13 @@ class ReadLaterScreen extends ConsumerWidget {
     List<SavedUrl> items,
   ) {
     if (items.isEmpty) return const SizedBox.shrink();
-    final theme = Theme.of(context);
+    final theme = ShadTheme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Text(title, style: theme.textTheme.titleSmall),
+          child: Text(title, style: theme.textTheme.small),
         ),
         for (final item in items)
           SavedUrlCard(
@@ -63,15 +74,16 @@ class ReadLaterScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(readLaterQueueProvider);
+    final s = AppStrings.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Read later')),
+      appBar: AppBar(title: Text(s.readLaterTitle)),
       body: switch (state) {
         AsyncData(:final value) => value.totalCount == 0
-            ? const EmptyState(
-                icon: Icons.schedule_outlined,
-                title: 'Your read-later queue is empty',
-                subtitle: 'Saved items in your inbox show up here.',
+            ? EmptyState(
+                icon: LucideIcons.clock,
+                title: s.emptyReadLaterTitle,
+                subtitle: s.emptyReadLaterSubtitle,
               )
             : RefreshIndicator(
                 onRefresh: () => ref.read(readLaterQueueProvider.notifier).refresh(),
@@ -84,11 +96,11 @@ class ReadLaterScreen extends ConsumerWidget {
                     _section(
                       context,
                       ref,
-                      "Today's 3 (~${value.todaysThreeMinutes} min)",
+                      s.todaysThree(value.todaysThreeMinutes),
                       value.todaysThree,
                     ),
-                    _section(context, ref, '5-minute reads', value.fiveMinutes),
-                    _section(context, ref, 'Sit-down reads', value.sitDown),
+                    _section(context, ref, s.fiveMinuteReads, value.fiveMinutes),
+                    _section(context, ref, s.sitDownReads, value.sitDown),
                     const SizedBox(height: 16),
                   ],
                 ),

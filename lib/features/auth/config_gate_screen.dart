@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Scaffold, SelectableText;
+import 'package:flutter/widgets.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/config/app_config.dart';
 
@@ -10,6 +12,7 @@ class ConfigGateScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -20,27 +23,25 @@ class ConfigGateScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  Icons.settings_suggest_outlined,
+                  LucideIcons.settings2,
                   size: 40,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: theme.colorScheme.primary,
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  'Hazy isn\'t configured yet',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
+                Text("Hazy isn't configured yet", style: theme.textTheme.h3),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'This build is missing the Clerk publishable key. Run '
                   'the app with:',
+                  style: theme.textTheme.p,
                 ),
                 const SizedBox(height: 8),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
+                    color: theme.colorScheme.muted,
+                    borderRadius: theme.radius,
                   ),
                   child: const SelectableText(
                     'flutter run \\\n'
@@ -52,7 +53,7 @@ class ConfigGateScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   'Current API base URL: ${AppConfig.apiBaseUrl}',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: theme.textTheme.muted,
                 ),
               ],
             ),

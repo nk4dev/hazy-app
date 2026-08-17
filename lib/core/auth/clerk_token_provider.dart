@@ -35,6 +35,21 @@ class ClerkAuthBridge {
 
   static bool get isSignedIn => _state?.isSignedIn ?? false;
 
+  /// Forces an immediate retry of Clerk's environment/client fetch, for a
+  /// manual "Retry" action on [SplashScreen] — the SDK already retries this
+  /// on its own every 10s, but that's a long wait to sit through silently
+  /// after a transient network blip.
+  static Future<void> retryInitialization() async {
+    final s = _state;
+    if (s == null) return;
+    try {
+      await s.initialize();
+    } catch (_) {
+      // Swallow — maybeState stays null and the splash screen's own
+      // timeout/retry affordance handles surfacing this to the user.
+    }
+  }
+
   /// Returns the current Clerk session JWT, or `null` if signed out or the
   /// token couldn't be retrieved (the request will then fail with a 401,
   /// which [ApiClient]/callers surface as [ApiException.isUnauthorized]).

@@ -1,13 +1,20 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Scaffold, AppBar, ListView, MediaQuery;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/api/api_exception.dart';
+import '../../core/localization/app_strings.dart';
 import '../../models/ask.dart';
 import '../../widgets/citation_list.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/loading_view.dart';
 import 'ask_providers.dart';
+
+// Language names are conventionally shown in their own language regardless
+// of the current UI language; only "Default" is localized.
+const _languageNames = {'en': 'English', 'ja': '日本語'};
 
 class AskThreadScreen extends ConsumerStatefulWidget {
   const AskThreadScreen({super.key, required this.threadId});
@@ -36,7 +43,7 @@ class _AskThreadScreenState extends ConsumerState<AskThreadScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ShadToaster.of(context).show(ShadToast.destructive(description: Text(e.message)));
       }
     }
   }
@@ -44,20 +51,26 @@ class _AskThreadScreenState extends ConsumerState<AskThreadScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(askThreadProvider(widget.threadId));
+    final s = AppStrings.of(context);
+    final languageOptions = {null: s.languageDefault, ..._languageNames};
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(state.value?.thread?.title ?? 'New question'),
+        title: Text(state.value?.thread?.title ?? s.newQuestionTitle),
         actions: [
-          PopupMenuButton<String?>(
-            tooltip: 'Answer language',
-            icon: const Icon(Icons.translate),
-            onSelected: (value) => setState(() => _languageOverride = value),
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: null, child: Text('Default')),
-              PopupMenuItem(value: 'en', child: Text('English')),
-              PopupMenuItem(value: 'ja', child: Text('日本語')),
-            ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: ShadSelect<String?>(
+              key: ValueKey(_languageOverride),
+              minWidth: 130,
+              initialValue: _languageOverride,
+              options: languageOptions.entries
+                  .map((e) => ShadOption(value: e.key, child: Text(e.value)))
+                  .toList(),
+              selectedOptionBuilder: (context, value) =>
+                  Text(languageOptions[value] ?? s.languageDefault),
+              onChanged: (value) => setState(() => _languageOverride = value),
+            ),
           ),
         ],
       ),
@@ -66,7 +79,7 @@ class _AskThreadScreenState extends ConsumerState<AskThreadScreen> {
             children: [
               Expanded(
                 child: value.messages.isEmpty
-                    ? const Center(child: Text('Ask a question about your saved links.'))
+                    ? Center(child: Text(s.askAQuestionAboutSavedLinks))
                     : ListView.builder(
                         padding: const EdgeInsets.all(12),
                         itemCount: value.messages.length,
@@ -75,31 +88,29 @@ class _AskThreadScreenState extends ConsumerState<AskThreadScreen> {
                       ),
               ),
               if (value.isSending)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: LoadingView(message: 'Thinking through your saved links…'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: LoadingView(message: s.thinking),
                 ),
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.all(8),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: TextField(
+                        child: ShadTextarea(
                           controller: _controller,
-                          decoration: const InputDecoration(
-                            hintText: 'Ask a question…',
-                            border: OutlineInputBorder(),
-                          ),
-                          minLines: 1,
-                          maxLines: 4,
+                          placeholder: Text(s.askQuestionPlaceholder),
+                          minHeight: 40,
+                          maxHeight: 120,
                           onSubmitted: (_) => _send(),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      IconButton.filled(
+                      ShadIconButton(
                         onPressed: value.isSending ? null : _send,
-                        icon: const Icon(Icons.send),
+                        icon: const Icon(LucideIcons.send),
                       ),
                     ],
                   ),
@@ -124,7 +135,8 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = ShadTheme.of(context);
+    final s = AppStrings.of(context);
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -133,21 +145,18 @@ class _MessageBubble extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: message.isUser
-              ? theme.colorScheme.primaryContainer
-              : theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
+              ? theme.colorScheme.primary.withValues(alpha: 0.12)
+              : theme.colorScheme.muted,
+          borderRadius: theme.radius,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(message.content),
+            Text(message.content, style: theme.textTheme.p),
             if (!message.isUser && message.usedFallback) ...[
               const SizedBox(height: 6),
-              Text(
-                'AI unavailable — showing a plain keyword match instead.',
-                style: theme.textTheme.labelSmall,
-              ),
+              Text(s.aiUnavailableFallback, style: theme.textTheme.small),
             ],
             if (!message.isUser && message.citations.isNotEmpty) ...[
               const SizedBox(height: 8),

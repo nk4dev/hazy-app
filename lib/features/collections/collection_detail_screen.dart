@@ -1,7 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'
+    show Scaffold, AppBar, RefreshIndicator, ListView, Dismissible, DismissDirection;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../core/localization/app_strings.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/loading_view.dart';
@@ -16,17 +20,19 @@ class CollectionDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(collectionDetailProvider(collectionId));
+    final theme = ShadTheme.of(context);
+    final s = AppStrings.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(state.value?.name ?? 'Collection'),
+        title: Text(state.value?.name ?? s.collectionFallbackTitle),
       ),
       body: switch (state) {
         AsyncData(:final value) => value.items.isEmpty
-            ? const EmptyState(
-                icon: Icons.folder_open_outlined,
-                title: 'No items in this collection yet',
-                subtitle: 'Add items from any saved link\'s detail screen.',
+            ? EmptyState(
+                icon: LucideIcons.folderOpen,
+                title: s.emptyCollectionItemsTitle,
+                subtitle: s.emptyCollectionItemsSubtitle,
               )
             : RefreshIndicator(
                 onRefresh: () =>
@@ -39,10 +45,13 @@ class CollectionDetailScreen extends ConsumerWidget {
                       key: ValueKey(item.id),
                       direction: DismissDirection.endToStart,
                       background: Container(
-                        color: Theme.of(context).colorScheme.errorContainer,
+                        color: theme.colorScheme.destructive,
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: const Icon(Icons.remove_circle_outline),
+                        child: Icon(
+                          LucideIcons.circleMinus,
+                          color: theme.colorScheme.destructiveForeground,
+                        ),
                       ),
                       onDismissed: (_) => ref
                           .read(collectionDetailProvider(collectionId).notifier)

@@ -43,7 +43,7 @@ dependencies:
   url_launcher: ^6.3.2
   receive_sharing_intent: ^1.8.1
   shared_preferences: ^2.5.3
-
+  shadcn_ui: ^0.56.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

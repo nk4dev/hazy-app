@@ -1,4 +1,4 @@
-package com.hazy.hazy_mobile
+package me.nknighta.apps.hazy
 
 import io.flutter.embedding.android.FlutterActivity
 

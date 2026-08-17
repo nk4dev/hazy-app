@@ -19,20 +19,26 @@ deployed backend (`flutter analyze` clean, `flutter test` passing). A
 `.env.local` with a real Clerk publishable key and the deployed API base
 URL (`https://hazy.n-knight-pc0627.workers.dev/api/v1`) exists locally
 (gitignored, not committed — see `.env.example` for the template).
-Confirmed end-to-end so far:
+Confirmed end-to-end on a real Android emulator, signed in against the real
+backend:
 - `GET /me` unauthenticated returns
   `{"error":{"code":"unauthorized","message":"Sign in required."}}`,
   matching `ApiClient`'s expected envelope exactly.
-- `flutter run -d <android-emulator> --dart-define-from-file=.env.local`
-  builds, installs, and launches on Android; the Clerk sign-in screen
-  (`ClerkAuthentication()`) renders correctly with GitHub/Google OAuth
-  buttons — confirms `ConfigGate` → `ClerkAuth` → go_router `/sign-in`
-  wiring all works against real credentials.
+- Clerk sign-in screen renders and completes sign-in successfully.
+- Read Later and Library screens render real backend data (bucketed queue,
+  7-day stats chart, saved items with fetched metadata).
+- Android share-sheet intake works fully end-to-end: an
+  `android.intent.action.SEND` intent (as any browser's "Share" would send)
+  is caught by `ShareIntakeListener`, routes to `ShareConfirmScreen`
+  pre-filled with the URL, and `POST /items` on Save lands the item in
+  Library with real server-fetched metadata (title/description/read time).
+- Dark mode (`lib/core/theme/theme_mode_provider.dart`, toggle in Settings
+  under "Appearance") renders correctly — verified visually on-device.
 
-Not yet done: actually signing in and walking the post-auth screens
-(library, ask, etc) against the real backend — verified up to the sign-in
-screen only so far. Whoever picks this up next should sign in and exercise
-each feature.
+Not yet done: Collections, Search, and Ask haven't been walked manually
+against the real backend yet (built and unit-verified, just not
+click-tested on-device). No iOS testing at all — no Mac available in this
+environment; only Android has been run.
 
 ## Running
 

@@ -1,7 +1,19 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'
+    show
+        Scaffold,
+        AppBar,
+        Dismissible,
+        DismissDirection,
+        RefreshIndicator,
+        ListView,
+        FloatingActionButton,
+        CircularProgressIndicator;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../core/localization/app_strings.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/loading_view.dart';
@@ -38,44 +50,75 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     super.dispose();
   }
 
+  Future<bool?> _confirmDelete(BuildContext context) {
+    final s = AppStrings.of(context);
+    return showShadDialog<bool>(
+      context: context,
+      builder: (context) => ShadDialog.alert(
+        title: Text(s.deleteItemConfirmTitle),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(s.cancel),
+          ),
+          ShadButton.destructive(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(s.delete),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(libraryProvider);
+    final theme = ShadTheme.of(context);
+    final s = AppStrings.of(context);
+    final sortOptions = {'newest': s.sortNewest, 'oldest': s.sortOldest};
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Library'),
+        title: Text(s.libraryTitle),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.folder_outlined),
-            tooltip: 'Collections',
+          ShadIconButton.ghost(
+            icon: const Icon(LucideIcons.folder),
             onPressed: () => context.push('/library/collections'),
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.sort),
-            onSelected: (sort) =>
-                ref.read(libraryProvider.notifier).setSort(sort),
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'newest', child: Text('Newest first')),
-              PopupMenuItem(value: 'oldest', child: Text('Oldest first')),
-            ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: ShadSelect<String>(
+              key: ValueKey(state.value?.sort),
+              minWidth: 150,
+              initialValue: state.value?.sort ?? 'newest',
+              options: sortOptions.entries
+                  .map((e) => ShadOption(value: e.key, child: Text(e.value)))
+                  .toList(),
+              selectedOptionBuilder: (context, value) =>
+                  Text(sortOptions[value] ?? value),
+              onChanged: (sort) {
+                if (sort != null) {
+                  ref.read(libraryProvider.notifier).setSort(sort);
+                }
+              },
+            ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showSaveUrlDialog(context, ref),
-        child: const Icon(Icons.add_link),
+        child: const Icon(LucideIcons.link),
       ),
       body: switch (state) {
         AsyncData(:final value) => value.items.isEmpty
             ? EmptyState(
-                icon: Icons.bookmark_border,
-                title: 'Nothing saved yet',
-                subtitle: 'Tap + to save your first link.',
-                action: FilledButton.icon(
+                icon: LucideIcons.bookmark,
+                title: s.emptyLibraryTitle,
+                subtitle: s.emptyLibrarySubtitle,
+                action: ShadButton(
                   onPressed: () => showSaveUrlDialog(context, ref),
-                  icon: const Icon(Icons.add_link),
-                  label: const Text('Save a link'),
+                  leading: const Icon(LucideIcons.link),
+                  child: Text(s.saveALink),
                 ),
               )
             : RefreshIndicator(
@@ -95,27 +138,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       key: ValueKey(item.id),
                       direction: DismissDirection.endToStart,
                       background: Container(
-                        color: Theme.of(context).colorScheme.errorContainer,
+                        color: theme.colorScheme.destructive,
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: const Icon(Icons.delete_outline),
-                      ),
-                      confirmDismiss: (_) => showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Delete this item?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(false),
-                              child: const Text('Cancel'),
-                            ),
-                            FilledButton(
-                              onPressed: () => Navigator.of(context).pop(true),
-                              child: const Text('Delete'),
-                            ),
-                          ],
+                        child: Icon(
+                          LucideIcons.trash2,
+                          color: theme.colorScheme.destructiveForeground,
                         ),
                       ),
+                      confirmDismiss: (_) => _confirmDelete(context),
                       onDismissed: (_) =>
                           ref.read(libraryProvider.notifier).deleteItem(item.id),
                       child: SavedUrlCard(

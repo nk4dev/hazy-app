@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/ask/ask_thread_list_screen.dart';
 import '../../features/ask/ask_thread_screen.dart';
 import '../../features/auth/sign_in_screen.dart';
+import '../../features/auth/splash_screen.dart';
 import '../../features/collections/collection_detail_screen.dart';
 import '../../features/collections/collections_screen.dart';
 import '../../features/item_detail/item_detail_screen.dart';
@@ -12,7 +13,6 @@ import '../../features/read_later/read_later_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/share_intake/share_confirm_screen.dart';
-import '../../widgets/loading_view.dart';
 import '../auth/clerk_token_provider.dart';
 import 'app_shell.dart';
 
@@ -42,7 +42,7 @@ final GoRouter appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/splash',
-      builder: (context, state) => const Scaffold(body: LoadingView()),
+      builder: (context, state) => const SplashScreen(),
     ),
     GoRoute(
       path: '/sign-in',

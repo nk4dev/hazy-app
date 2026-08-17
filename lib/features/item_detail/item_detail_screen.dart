@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Scaffold, AppBar, ListView, Image;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_exception.dart';
+import '../../core/localization/app_strings.dart';
 import '../../models/saved_url.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/loading_view.dart';
@@ -16,39 +19,43 @@ class ItemDetailScreen extends ConsumerWidget {
 
   final String itemId;
 
+  Future<bool?> _confirmDelete(BuildContext context) {
+    final s = AppStrings.of(context);
+    return showShadDialog<bool>(
+      context: context,
+      builder: (context) => ShadDialog.alert(
+        title: Text(s.deleteItemConfirmTitle),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(s.cancel),
+          ),
+          ShadButton.destructive(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(s.delete),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(itemDetailProvider(itemId));
+    final s = AppStrings.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Item'),
+        title: Text(s.itemAppBarTitle),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.folder_open_outlined),
-            tooltip: 'Add to collection',
+          ShadIconButton.ghost(
+            icon: const Icon(LucideIcons.folderOpen),
             onPressed: () => showAddToCollectionSheet(context, ref, itemId),
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Delete',
+          ShadIconButton.ghost(
+            icon: const Icon(LucideIcons.trash2),
             onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Delete this item?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancel'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Delete'),
-                    ),
-                  ],
-                ),
-              );
+              final confirmed = await _confirmDelete(context);
               if (confirmed != true) return;
               await ref.read(itemDetailProvider(itemId).notifier).delete();
               ref.invalidate(libraryProvider);
@@ -76,37 +83,42 @@ class _ItemDetailBody extends ConsumerWidget {
   final String itemId;
 
   Future<void> _editTitleAndSummary(BuildContext context, WidgetRef ref) async {
+    final s = AppStrings.of(context);
     final titleController = TextEditingController(text: item.title ?? '');
     final summaryController = TextEditingController(text: item.summary ?? '');
-    final saved = await showDialog<bool>(
+    final saved = await showShadDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: 'Title'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: summaryController,
-              decoration: const InputDecoration(labelText: 'Summary'),
-              maxLines: 4,
-            ),
-          ],
-        ),
+      builder: (context) => ShadDialog(
+        title: Text(s.editDialogTitle),
         actions: [
-          TextButton(
+          ShadButton.outline(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(s.cancel),
           ),
-          FilledButton(
+          ShadButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Save'),
+            child: Text(s.save),
           ),
         ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ShadInput(
+                controller: titleController,
+                placeholder: Text(s.titleFieldPlaceholder),
+              ),
+              const SizedBox(height: 12),
+              ShadTextarea(
+                controller: summaryController,
+                placeholder: Text(s.summaryFieldPlaceholder),
+                minHeight: 100,
+              ),
+            ],
+          ),
+        ),
       ),
     );
     if (saved != true) return;
@@ -118,23 +130,24 @@ class _ItemDetailBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+    final theme = ShadTheme.of(context);
+    final s = AppStrings.of(context);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         if (item.ogImageUrl != null)
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: theme.radius,
             child: Image.network(item.ogImageUrl!, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
           ),
         const SizedBox(height: 12),
-        Text(item.displayTitle, style: theme.textTheme.headlineSmall),
+        Text(item.displayTitle, style: theme.textTheme.h3),
         const SizedBox(height: 4),
-        InkWell(
+        GestureDetector(
           onTap: () => launchUrl(Uri.parse(item.url), mode: LaunchMode.externalApplication),
           child: Text(
             item.url,
-            style: theme.textTheme.bodySmall?.copyWith(
+            style: theme.textTheme.small.copyWith(
               color: theme.colorScheme.primary,
               decoration: TextDecoration.underline,
             ),
@@ -144,56 +157,54 @@ class _ItemDetailBody extends ConsumerWidget {
         Wrap(
           spacing: 8,
           children: [
-            if (item.domain != null) Chip(label: Text(item.domain!)),
+            if (item.domain != null) ShadBadge.secondary(child: Text(item.domain!)),
             if (item.estimatedReadMinutes != null)
-              Chip(label: Text('${item.estimatedReadMinutes} min read')),
-            Chip(label: Text(item.fetchStatus.name)),
+              ShadBadge.secondary(child: Text(s.minRead(item.estimatedReadMinutes!))),
+            ShadBadge.secondary(child: Text(item.fetchStatus.name)),
           ],
         ),
         const SizedBox(height: 16),
         if (item.fetchStatus == FetchStatus.error) ...[
-          Card(
-            color: theme.colorScheme.errorContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.fetchError ?? 'Failed to fetch this page.'),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        ref.read(itemDetailProvider(itemId).notifier).refetch(),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
+          ShadCard(
+            backgroundColor: theme.colorScheme.destructive.withValues(alpha: 0.1),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.fetchError ?? s.failedToFetchPage),
+                const SizedBox(height: 8),
+                ShadButton.outline(
+                  onPressed: () =>
+                      ref.read(itemDetailProvider(itemId).notifier).refetch(),
+                  leading: const Icon(LucideIcons.refreshCw),
+                  child: Text(s.retry),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
         ],
         if (item.description != null) ...[
-          Text('Description', style: theme.textTheme.labelLarge),
+          Text(s.descriptionLabel, style: theme.textTheme.small),
           const SizedBox(height: 4),
-          Text(item.description!),
+          Text(item.description!, style: theme.textTheme.p),
           const SizedBox(height: 16),
         ],
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Summary', style: theme.textTheme.labelLarge),
-            TextButton.icon(
+            Text(s.summaryLabel, style: theme.textTheme.small),
+            ShadButton.ghost(
               onPressed: () async {
                 try {
                   await ref.read(itemDetailProvider(itemId).notifier).summarize();
                 } on ApiException catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
+                    ShadToaster.of(context).show(
+                      ShadToast.destructive(
+                        description: Text(
                           e.isServiceNotConfigured
-                              ? 'AI summaries aren\'t available right now.'
+                              ? s.aiSummaryUnavailable
                               : e.message,
                         ),
                       ),
@@ -201,17 +212,17 @@ class _ItemDetailBody extends ConsumerWidget {
                   }
                 }
               },
-              icon: const Icon(Icons.auto_awesome),
-              label: Text(item.summary == null ? 'Generate' : 'Regenerate'),
+              leading: const Icon(LucideIcons.sparkles),
+              child: Text(item.summary == null ? s.generate : s.regenerate),
             ),
           ],
         ),
-        Text(item.summary ?? 'No summary yet.'),
+        Text(item.summary ?? s.noSummaryYet, style: theme.textTheme.p),
         const SizedBox(height: 24),
-        OutlinedButton.icon(
+        ShadButton.outline(
           onPressed: () => _editTitleAndSummary(context, ref),
-          icon: const Icon(Icons.edit_outlined),
-          label: const Text('Edit title / summary'),
+          leading: const Icon(LucideIcons.pencil),
+          child: Text(s.editTitleSummary),
         ),
       ],
     );

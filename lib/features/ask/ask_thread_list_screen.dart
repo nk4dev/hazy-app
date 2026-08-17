@@ -1,8 +1,19 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'
+    show
+        Scaffold,
+        AppBar,
+        FloatingActionButton,
+        RefreshIndicator,
+        ListView,
+        Dismissible,
+        DismissDirection,
+        ListTile;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../core/localization/app_strings.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/loading_view.dart';
@@ -14,24 +25,26 @@ class AskThreadListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(askThreadListProvider);
+    final theme = ShadTheme.of(context);
+    final s = AppStrings.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ask')),
+      appBar: AppBar(title: Text(s.askTitle)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/ask/thread/$newAskThreadId'),
-        icon: const Icon(Icons.add),
-        label: const Text('New question'),
+        icon: const Icon(LucideIcons.plus),
+        label: Text(s.newQuestion),
       ),
       body: switch (state) {
         AsyncData(:final value) => value.isEmpty
             ? EmptyState(
-                icon: Icons.auto_awesome_outlined,
-                title: 'Ask Hazy anything',
-                subtitle: 'Answers cite your own saved pages.',
-                action: FilledButton.icon(
+                icon: LucideIcons.sparkles,
+                title: s.askAnything,
+                subtitle: s.askSubtitle,
+                action: ShadButton(
                   onPressed: () => context.push('/ask/thread/$newAskThreadId'),
-                  icon: const Icon(Icons.add),
-                  label: const Text('New question'),
+                  leading: const Icon(LucideIcons.plus),
+                  child: Text(s.newQuestion),
                 ),
               )
             : RefreshIndicator(
@@ -44,17 +57,22 @@ class AskThreadListScreen extends ConsumerWidget {
                       key: ValueKey(thread.id),
                       direction: DismissDirection.endToStart,
                       background: Container(
-                        color: Theme.of(context).colorScheme.errorContainer,
+                        color: theme.colorScheme.destructive,
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: const Icon(Icons.delete_outline),
+                        child: Icon(
+                          LucideIcons.trash2,
+                          color: theme.colorScheme.destructiveForeground,
+                        ),
                       ),
                       onDismissed: (_) =>
                           ref.read(askThreadListProvider.notifier).delete(thread.id),
                       child: ListTile(
-                        leading: const Icon(Icons.chat_bubble_outline),
+                        leading: const Icon(LucideIcons.messageCircle),
                         title: Text(thread.title),
-                        subtitle: Text(DateFormat.yMMMd().add_jm().format(thread.updatedAt)),
+                        subtitle: Text(
+                          DateFormat.yMMMd(s.localeCode).add_jm().format(thread.updatedAt),
+                        ),
                         onTap: () => context.push('/ask/thread/${thread.id}'),
                       ),
                     );
