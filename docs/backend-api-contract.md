@@ -11,18 +11,23 @@ fetches and summarizes them, full-text search works over saved items, and
 an AI "Ask" feature answers questions by citing the user's own saved pages.
 The mobile app's job is to give a native Flutter front end to the exact
 same backend the Next.js web app already uses — **do not invent new
-endpoints or reshape the data**; consume `/api/v1/**` as documented here.
+endpoints or reshape the data**; consume `/v1/**` as documented here.
 
 ## 1. Base URL
 
 ```
-https://<deployed-host>/api/v1
+https://<deployed-host>/v1
 ```
 
-For local development against the web repo running on the same machine /
-network, this is `http://localhost:3000/api/v1` (or the LAN IP printed by
-`next dev`, since `localhost` won't resolve from a physical device/emulator
-— use `10.0.2.2` for the Android emulator, or the host machine's LAN IP).
+The backend is a standalone Cloudflare Worker (`apps/api` in the hazy
+repo, deployed to its own `api.*` subdomain) — not a route on the Next.js
+web app, so there is no `/api` prefix on the path.
+
+For local development against `apps/api`'s dev server running on the same
+machine / network, this is `http://localhost:8787/v1` (port 8787 is that
+server's default; the LAN IP printed at startup also works, since
+`localhost` won't resolve from a physical device/emulator — use `10.0.2.2`
+for the Android emulator, or the host machine's LAN IP).
 
 Ask the human operator for the actual deployed base URL before wiring up
 production config — it is not fixed by this document.
@@ -37,7 +42,7 @@ There is no separate Hazy login system — do not build one.
   providers the Clerk instance has enabled). The human operator will
   supply the Clerk **publishable key** for this project's Clerk instance.
 - After a successful sign-in, Clerk gives you a **session token (JWT)**.
-  Attach it to every `/api/v1/**` request as:
+  Attach it to every `/v1/**` request as:
 
   ```
   Authorization: Bearer <clerk_session_token>
@@ -53,7 +58,7 @@ There is no separate Hazy login system — do not build one.
   `users` row (and default preferences) the first time an authenticated
   request reaches *any* endpoint — there is no separate "register" call to
   make. Simply sign in via Clerk and start calling the API.
-- **The entire `/api/v1/**` surface requires a signed-in Clerk session** —
+- **The entire `/v1/**` surface requires a signed-in Clerk session** —
   there are no public/unauthenticated endpoints. A request without a valid
   token gets a `401 unauthorized` (see §4).
 
@@ -88,6 +93,7 @@ alone, though status codes are also meaningful (see below).
 | 401         | `unauthorized`           | Missing/invalid/expired Clerk session.                          |
 | 404         | `not_found`              | Resource doesn't exist, or exists but isn't owned by the caller (the API never distinguishes the two — treat 404 as "not yours or doesn't exist"). |
 | 503         | `service_not_configured` | A required backend service (database, etc.) isn't configured server-side. Not something the client can fix — surface as a generic "try again later". |
+| 502         | `image_fetch_failed`     | `GET /items/:id/image` couldn't fetch the source image (timeout, non-200, etc). Surface as "couldn't download image" + retry. |
 | 500         | `internal_error`         | Unhandled server error.                                          |
 
 All requests (mutating and non-mutating) can fail this way — always handle
@@ -108,6 +114,7 @@ type SavedUrlDTO = {
   faviconUrl: string | null;
   ogImageUrl: string | null;
   summary: string | null;        // AI-written summary, if generated
+  tags: string[];                // lowercased/trimmed/deduped, max 30
   contentLanguage: string | null;
   estimatedReadMinutes: number | null;
   fetchStatus: "pending" | "success" | "error";
@@ -127,7 +134,10 @@ type CollectionDTO = {
   name: string;
   description: string | null;
   color: string | null;
+  summary: string | null;        // AI-written overview of the whole collection, if generated
+  summaryUpdatedAt: string | null; // ISO 8601
   itemCount: number;
+  previewImages: string[];       // up to 4 recent og:image URLs from its items
   createdAt: string;
 };
 
@@ -168,7 +178,7 @@ type AskResponseDTO = {
 
 ## 6. Endpoints
 
-All paths are relative to `/api/v1`. All require `Authorization: Bearer
+All paths are relative to `/v1`. All require `Authorization: Bearer
 <token>` (§2). All bodies are JSON (`Content-Type: application/json`).
 
 ### Saved items
@@ -188,8 +198,9 @@ Returns `PaginatedResponse<SavedUrlDTO>`.
 
 **`GET /items/:id`** — fetch one saved item. Returns `SavedUrlDTO`.
 
-**`PATCH /items/:id`** — edit title/summary.
-Body (all optional): `{ "title"?: string | null, "summary"?: string | null }`
+**`PATCH /items/:id`** — edit title/site name/summary/tags.
+Body (all optional, only sent fields are updated):
+`{ "title"?: string | null (max 500), "domain"?: string | null (max 255, manual site-name override), "summary"?: string | null (max 4000), "tags"?: string[] (up to 100 sent, stored lowercased/trimmed/deduped, capped at 30) }`
 Returns updated `SavedUrlDTO`.
 
 **`DELETE /items/:id`** — delete a saved item. Returns `{ "id": string }`.
@@ -203,6 +214,17 @@ already-saved item. No body. Requires an AI key configured server-side —
 if none is set, this fails `503 service_not_configured` rather than
 succeeding with a fallback (unlike Ask, there's no non-AI summary to fall
 back to). Returns updated `SavedUrlDTO` with a new `summary`.
+
+**`GET /items/:id/image`** — download the item's preview image.
+Streams the image bytes directly (not the `{ data }` envelope) — response
+`Content-Type` matches the source image, with `Content-Disposition:
+attachment; filename="..."`. Fetched fresh from `ogImageUrl` on every call,
+not cached server-side. For x.com/twitter.com items with no `ogImageUrl`
+(their metadata scraping is blocked), the server resolves the image
+on-the-fly via fxtwitter.com instead — this resolution is not written back
+to the row; use `POST /:id/refetch` to fix it permanently.
+Fails `404 not_found` (item doesn't exist/isn't yours) or `502
+image_fetch_failed` (image couldn't be resolved/fetched).
 
 ### Search
 
@@ -262,7 +284,8 @@ Returns:
 
 **`PATCH /collections/:id`** — edit a collection.
 Body (all optional): `{ "name"?: string, "description"?: string | null, "color"?: string | null }`
-Returns the updated collection row.
+Returns the updated collection row — note `itemCount` comes back as `0`
+regardless of actual membership; re-fetch the list to get the real count.
 
 **`DELETE /collections/:id`** — delete a collection (items themselves are
 not deleted, only the collection). Returns `{ "id": string }`.
@@ -274,6 +297,14 @@ Idempotent — adding the same item twice is a no-op, not an error.
 
 **`DELETE /collections/:id/items/:savedUrlId`** — remove an item from a
 collection. Returns `{ "collectionId": string, "savedUrlId": string }`.
+
+**`POST /collections/:id/summarize`** — summarize every item in the
+collection into one AI overview.
+Body (optional): `{ "locale"?: "en" | "ja" }` — omit to let the server infer it.
+Returns `{ "summary": string, "summaryUpdatedAt": string }`, which is also
+persisted to `CollectionDTO.summary`/`summaryUpdatedAt` (readable on the
+next `GET`). Fails `503 service_not_configured` if no AI key is configured
+server-side. Empty/small collections may produce a short summary or fail.
 
 ### Ask (AI, citing the user's own saved items)
 

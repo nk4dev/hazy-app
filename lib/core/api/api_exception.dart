@@ -1,7 +1,7 @@
 /// Mirrors the `error` branch of Hazy's response envelope (see
 /// docs/ai/make-flutter-app.md §3–4 in the hazy repo).
 ///
-/// Every `/api/v1/**` call surfaces failures through this type — never a
+/// Every `/v1/**` call surfaces failures through this type — never a
 /// raw [DioException] — so callers always branch on `code`/`message`
 /// rather than HTTP status alone.
 class ApiException implements Exception {
@@ -28,6 +28,7 @@ class ApiException implements Exception {
   bool get isNotFound => code == 'not_found';
   bool get isValidationError => code == 'validation_error';
   bool get isServiceNotConfigured => code == 'service_not_configured';
+  bool get isImageFetchFailed => code == 'image_fetch_failed';
 
   @override
   String toString() => 'ApiException($code): $message';

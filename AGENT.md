@@ -2,7 +2,8 @@
 
 This is the Flutter client for **Hazy** ("a memory for the URLs you save").
 It is a client only: all data, AI, and business logic live in Hazy's
-existing Next.js backend at `/api/v1/**`. This repo must never invent
+backend — a standalone Cloudflare Worker (`apps/api` in the hazy repo, not
+the Next.js web app) at `/v1/**`. This repo must never invent
 endpoints, reshape response payloads, or duplicate backend logic — it
 consumes the contract documented in
 [`docs/backend-api-contract.md`](docs/backend-api-contract.md) (a copy of
@@ -17,8 +18,9 @@ the source of truth for every endpoint, DTO shape, and error code.
 Builds, installs, and runs on a real Android emulator against the real
 deployed backend (`flutter analyze` clean, `flutter test` passing). A
 `.env.local` with a real Clerk publishable key and the deployed API base
-URL (`https://hazy.n-knight-pc0627.workers.dev/api/v1`) exists locally
-(gitignored, not committed — see `.env.example` for the template).
+URL (`https://api.hz.nknighta.me/v1` — the `apps/api` Cloudflare Worker)
+exists locally (gitignored, not committed — see `.env.example` for the
+template).
 Confirmed end-to-end on a real Android emulator, signed in against the real
 backend:
 - `GET /me` unauthenticated returns
@@ -51,7 +53,7 @@ every `.env*` file except `.env.example`.) Or, without a local env file:
 
 ```bash
 flutter run \
-  --dart-define=HAZY_API_BASE_URL=https://your-host/api/v1 \
+  --dart-define=HAZY_API_BASE_URL=https://your-host/v1 \
   --dart-define=CLERK_PUBLISHABLE_KEY=pk_...
 ```
 
@@ -59,10 +61,10 @@ Without both defines, the app shows a "not configured" screen instead of
 touching the Clerk SDK (`lib/features/auth/config_gate_screen.dart`) —
 this is intentional, not a bug, so the app never crashes on a missing key.
 
-For the Android emulator against a local `next dev` server, the default
-`HAZY_API_BASE_URL` (`http://10.0.2.2:3000/api/v1`) already points at the
-host machine's loopback — you only need to supply the Clerk key in that
-case.
+For the Android emulator against a local `apps/api` dev server (`bun run
+dev`, port 8787), the default `HAZY_API_BASE_URL`
+(`http://10.0.2.2:8787/v1`) already points at the host machine's loopback
+— you only need to supply the Clerk key in that case.
 
 ## Architecture
 
@@ -135,7 +137,7 @@ Features, matching the backend brief's suggested build order: `auth`,
   directly as go_router's `refreshListenable` for auth redirects, and pulls
   `.sessionToken()` (`Future<SessionToken>`, `.jwt` is the string) for the
   `Authorization: Bearer` header on every API call.
-- **Error handling contract**: every `/api/v1/**` response is `{ data }` or
+- **Error handling contract**: every `/v1/**` response is `{ data }` or
   `{ error: { code, message, details } }` — `ApiClient` always branches on
   that envelope, never on HTTP status alone, and throws `ApiException`
   (see `lib/core/api/api_exception.dart`) so UI code never touches

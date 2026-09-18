@@ -78,6 +78,8 @@ class CollectionDetailNotifier extends AsyncNotifier<CollectionDetail> {
           name: current.name,
           description: current.description,
           color: current.color,
+          summary: current.summary,
+          summaryUpdatedAt: current.summaryUpdatedAt,
           items: current.items.where((i) => i.id != savedUrlId).toList(),
         ),
       );

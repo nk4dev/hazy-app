@@ -45,7 +45,7 @@ class ConfigGateScreen extends StatelessWidget {
                   ),
                   child: const SelectableText(
                     'flutter run \\\n'
-                    '  --dart-define=HAZY_API_BASE_URL=https://your-host/api/v1 \\\n'
+                    '  --dart-define=HAZY_API_BASE_URL=https://your-host/v1 \\\n'
                     '  --dart-define=CLERK_PUBLISHABLE_KEY=pk_...',
                     style: TextStyle(fontFamily: 'monospace', fontSize: 12),
                   ),

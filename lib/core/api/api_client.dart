@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../../models/ask.dart';
@@ -9,7 +11,7 @@ import '../../models/user_me.dart';
 import '../config/app_config.dart';
 import 'api_exception.dart';
 
-/// Thin wrapper over `/api/v1/**` (see docs/ai/make-flutter-app.md in the
+/// Thin wrapper over `/v1/**` (see docs/ai/make-flutter-app.md in the
 /// hazy repo). Every method returns decoded models or throws
 /// [ApiException] — never a raw [DioException] — per the envelope contract
 /// in §3–4 of that brief.
@@ -107,14 +109,18 @@ class ApiClient {
   Future<SavedUrl> updateItem(
     String id, {
     String? title,
+    String? domain,
     String? summary,
+    List<String>? tags,
   }) async {
     final json = await _unwrap(
       _dio.patch(
         '/items/$id',
         data: {
           if (title != null) 'title': title,
+          if (domain != null) 'domain': domain,
           if (summary != null) 'summary': summary,
+          if (tags != null) 'tags': tags,
         },
       ),
     );
@@ -131,6 +137,36 @@ class ApiClient {
   Future<SavedUrl> summarizeItem(String id) async {
     final json = await _unwrap(_dio.post('/items/$id/summarize'));
     return SavedUrl.fromJson(json);
+  }
+
+  /// Downloads the item's preview image as raw bytes — unlike every other
+  /// call, this endpoint streams the image binary directly rather than the
+  /// `{ data }` JSON envelope, so it bypasses [_unwrap].
+  Future<List<int>> downloadItemImage(String id) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        '/items/$id/image',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data!;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      Map<String, dynamic>? envelope;
+      if (data is Map<String, dynamic>) {
+        envelope = data;
+      } else if (data is List<int>) {
+        try {
+          final decoded = jsonDecode(utf8.decode(data));
+          if (decoded is Map<String, dynamic>) envelope = decoded;
+        } catch (_) {
+          // Error body wasn't JSON — fall through to the network exception.
+        }
+      }
+      if (envelope != null && envelope['error'] is Map) {
+        throw _errorFrom(envelope, e.response?.statusCode);
+      }
+      throw ApiException.network(e.message ?? 'Network request failed');
+    }
   }
 
   // ---- Search ---------------------------------------------------------
@@ -228,6 +264,22 @@ class ApiClient {
 
   Future<void> deleteCollection(String id) =>
       _unwrap(_dio.delete('/collections/$id'));
+
+  /// Summarizes every item in the collection into one AI overview.
+  /// `locale` is `"en"` | `"ja"`; omit to let the server infer it.
+  /// Also persisted server-side (`Collection.summary`/`summaryUpdatedAt`).
+  Future<CollectionSummary> summarizeCollection(
+    String id, {
+    String? locale,
+  }) async {
+    final json = await _unwrap(
+      _dio.post(
+        '/collections/$id/summarize',
+        data: {if (locale != null) 'locale': locale},
+      ),
+    );
+    return CollectionSummary.fromJson(json);
+  }
 
   Future<void> addItemToCollection(String collectionId, String savedUrlId) {
     return _unwrap(

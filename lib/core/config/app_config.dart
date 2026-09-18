@@ -6,12 +6,12 @@
 class AppConfig {
   const AppConfig._();
 
-  /// Base URL for `/api/v1/**`, e.g. `https://hazy.example.com/api/v1` or
-  /// `http://10.0.2.2:3000/api/v1` for the Android emulator against a local
-  /// `next dev` server.
+  /// Base URL for `/v1/**`, e.g. `https://api.hazy.example.com/v1` or
+  /// `http://10.0.2.2:8787/v1` for the Android emulator against a local
+  /// `apps/api` dev server (`bun run dev`, port 8787).
   static const String apiBaseUrl = String.fromEnvironment(
     'HAZY_API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000/api/v1',
+    defaultValue: 'http://10.0.2.2:8787/v1',
   );
 
   /// Clerk publishable key for this project's Clerk instance.

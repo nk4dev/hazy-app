@@ -36,6 +36,7 @@ class SavedUrl {
     required this.faviconUrl,
     required this.ogImageUrl,
     required this.summary,
+    required this.tags,
     required this.contentLanguage,
     required this.estimatedReadMinutes,
     required this.fetchStatus,
@@ -55,6 +56,8 @@ class SavedUrl {
       faviconUrl: json['faviconUrl'] as String?,
       ogImageUrl: json['ogImageUrl'] as String?,
       summary: json['summary'] as String?,
+      tags: (json['tags'] as List<dynamic>? ?? const [])
+          .cast<String>(),
       contentLanguage: json['contentLanguage'] as String?,
       estimatedReadMinutes: (json['estimatedReadMinutes'] as num?)?.toInt(),
       fetchStatus: FetchStatus.fromJson(json['fetchStatus'] as String),
@@ -75,6 +78,7 @@ class SavedUrl {
   final String? faviconUrl;
   final String? ogImageUrl;
   final String? summary;
+  final List<String> tags;
   final String? contentLanguage;
   final int? estimatedReadMinutes;
   final FetchStatus fetchStatus;
@@ -85,7 +89,9 @@ class SavedUrl {
 
   SavedUrl copyWith({
     String? title,
+    String? domain,
     String? summary,
+    List<String>? tags,
     FetchStatus? fetchStatus,
     String? fetchError,
     ReadLaterStatus? readLaterStatus,
@@ -93,12 +99,13 @@ class SavedUrl {
     return SavedUrl(
       id: id,
       url: url,
-      domain: domain,
+      domain: domain ?? this.domain,
       title: title ?? this.title,
       description: description,
       faviconUrl: faviconUrl,
       ogImageUrl: ogImageUrl,
       summary: summary ?? this.summary,
+      tags: tags ?? this.tags,
       contentLanguage: contentLanguage,
       estimatedReadMinutes: estimatedReadMinutes,
       fetchStatus: fetchStatus ?? this.fetchStatus,
