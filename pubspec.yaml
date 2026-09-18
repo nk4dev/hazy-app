@@ -41,7 +41,7 @@ dependencies:
   cached_network_image: ^3.4.1
   intl: ^0.20.2
   url_launcher: ^6.3.2
-  receive_sharing_intent: ^1.8.1
+  receive_sharing_intent: 1.8.1
   shared_preferences: ^2.5.3
   shadcn_ui: ^0.56.1
 dev_dependencies:
