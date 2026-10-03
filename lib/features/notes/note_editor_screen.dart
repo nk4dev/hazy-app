@@ -95,6 +95,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   bool _saveAgain = false;
   bool _deleted = false;
 
+  /// The note as it stood when the screen closed, for the final save —
+  /// the controllers it is read from are disposed by then.
+  Map<String, dynamic>? _finalPayload;
+
   _Mention? _mention;
 
   /// Bumped whenever sheet-visible state changes, so the open details
@@ -111,7 +115,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   void dispose() {
     _saveTimer?.cancel();
     // Leaving with unsaved edits: send them rather than drop them.
-    if (_saveState == _SaveState.dirty || _saveState == _SaveState.failed) {
+    if (_quill != null &&
+        (_saveState == _SaveState.dirty || _saveState == _SaveState.failed)) {
+      _finalPayload = _payload();
       unawaited(_save(notify: false));
     }
     _changes?.cancel();
@@ -223,14 +229,14 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       _saving = null;
       if (_saveAgain) {
         _saveAgain = false;
-        _save(notify: notify);
+        _save(notify: notify && mounted);
       }
     });
   }
 
   Future<void> _runSave(bool notify) async {
     _saveTimer?.cancel();
-    final payload = _payload();
+    final payload = _finalPayload ?? _payload();
     if (notify && mounted) setState(() => _saveState = _SaveState.saving);
     try {
       final id = _id;
@@ -325,12 +331,19 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     );
     if (confirmed != true || !mounted) return;
     _saveTimer?.cancel();
-    final id = _id;
+    // Stops autosave from here on, so the note can't be written back after
+    // it is deleted.
+    _deleted = true;
     try {
+      // A save still in flight lands first: a note that is only now being
+      // created needs its id to be deleted at all.
+      await _saving;
+      final id = _id;
       if (id != null) await _list.delete(id);
-      _deleted = true;
       if (mounted) context.pop();
     } on ApiException catch (e) {
+      _deleted = false;
+      if (_saveState == _SaveState.dirty) _markDirty();
       if (mounted) {
         ShadToaster.of(context).show(
           ShadToast.destructive(description: Text(e.message)),

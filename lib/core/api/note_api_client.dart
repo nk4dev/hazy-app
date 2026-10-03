@@ -67,8 +67,9 @@ class NoteApiClient {
           ? data['error'] as String
           : null;
       // Clerk answers a missing/invalid session with an HTML 404, while a
-      // genuinely missing note is a JSON `{ error: "not found" }`.
-      if (status == 401 || (status == 404 && message == null)) {
+      // genuinely missing note is JSON (`{ error: "not found" }`, or
+      // `{ ok: false }` from DELETE).
+      if (status == 401 || (status == 404 && data is! Map)) {
         throw ApiException(
           code: 'unauthorized',
           message: 'Sign in required.',

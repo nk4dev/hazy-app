@@ -14,6 +14,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../core/api/api_exception.dart';
+import '../../core/connectivity/offline_mode.dart';
 import '../../core/localization/app_strings.dart';
 import '../../models/note.dart';
 import '../../widgets/empty_state.dart';
@@ -46,6 +48,24 @@ class NotesScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref, String id) async {
+    try {
+      await ref.read(noteListProvider.notifier).delete(id);
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        ShadToaster.of(context).show(
+          ShadToast.destructive(
+            description: Text(
+              e.isNetworkError && OfflineMode.isOffline
+                  ? AppStrings.of(context).offlineMessage
+                  : e.message,
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -97,8 +117,7 @@ class NotesScreen extends ConsumerWidget {
                         ),
                       ),
                       confirmDismiss: (_) => _confirmDelete(context),
-                      onDismissed: (_) =>
-                          ref.read(noteListProvider.notifier).delete(note.id),
+                      onDismissed: (_) => _delete(context, ref, note.id),
                       child: _NoteRow(
                         note: note,
                         onTap: () => context.push('/note/${note.id}'),
