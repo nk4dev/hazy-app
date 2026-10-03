@@ -9,26 +9,48 @@ import '../../features/collections/collection_detail_screen.dart';
 import '../../features/collections/collections_screen.dart';
 import '../../features/item_detail/item_detail_screen.dart';
 import '../../features/library/library_screen.dart';
+import '../../features/notes/note_editor_screen.dart';
+import '../../features/notes/notes_screen.dart';
 import '../../features/read_later/read_later_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/share_intake/share_confirm_screen.dart';
 import '../auth/clerk_token_provider.dart';
+import '../connectivity/offline_mode.dart';
 import 'app_shell.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+/// True from the moment the app is entered without Clerk (offline, with a
+/// remembered user) until Clerk becomes reachable. Sticky so that regaining
+/// the network doesn't bounce the user back to the splash screen while
+/// Clerk is still re-initializing.
+bool _offlineSession = false;
+
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/splash',
-  refreshListenable: ClerkAuthBridge.listenable,
+  refreshListenable: Listenable.merge([
+    ClerkAuthBridge.listenable,
+    OfflineMode.listenable,
+  ]),
   redirect: (context, state) {
     final loc = state.matchedLocation;
     final authState = ClerkAuthBridge.maybeState;
 
     if (authState == null) {
+      // Clerk can't initialize without a network. If someone was signed in
+      // on this device before, let them into their locally cached library
+      // instead of blocking on the splash screen.
+      if (OfflineMode.isOffline && ClerkAuthBridge.userId != null) {
+        _offlineSession = true;
+      }
+      if (_offlineSession) {
+        return (loc == '/splash' || loc == '/sign-in') ? '/library' : null;
+      }
       return loc == '/splash' ? null : '/splash';
     }
+    _offlineSession = false;
 
     final signedIn = authState.isSignedIn;
     if (!signedIn) {
@@ -53,6 +75,15 @@ final GoRouter appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => ShareConfirmScreen(
         sharedUrl: state.extra as String? ?? '',
+      ),
+    ),
+    // Full-screen, above the bottom nav: the editor needs the room, and
+    // its own toolbar sits where the nav bar would be.
+    GoRoute(
+      path: '/note/:id',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => NoteEditorScreen(
+        noteId: state.pathParameters['id']!,
       ),
     ),
     StatefulShellRoute.indexedStack(
@@ -84,6 +115,14 @@ final GoRouter appRouter = GoRouter(
                   ],
                 ),
               ],
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/notes',
+              builder: (context, state) => const NotesScreen(),
             ),
           ],
         ),

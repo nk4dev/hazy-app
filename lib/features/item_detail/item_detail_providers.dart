@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api/api_exception.dart';
+import '../../core/auth/clerk_token_provider.dart';
 import '../../core/providers.dart';
 import '../../models/saved_url.dart';
 import '../library/library_providers.dart';
@@ -20,7 +22,17 @@ class ItemDetailNotifier extends AsyncNotifier<SavedUrl> {
   @override
   Future<SavedUrl> build() async {
     final api = ref.watch(apiClientProvider);
-    return api.getItem(itemId);
+    try {
+      return await api.getItem(itemId);
+    } on ApiException catch (e) {
+      // Offline: fall back to the copy in the local SQLite cache.
+      if (!e.isNetworkError) rethrow;
+      final cached = await ref
+          .read(localDatabaseProvider)
+          .savedUrl(ClerkAuthBridge.userId ?? '', itemId);
+      if (cached == null) rethrow;
+      return cached;
+    }
   }
 
   Future<void> updateFields({String? title, String? summary}) async {

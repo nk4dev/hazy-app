@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/auth/clerk_token_provider.dart';
+import '../../core/connectivity/offline_mode.dart';
 import '../../core/providers.dart';
 import '../../models/saved_url.dart';
 
@@ -51,9 +52,12 @@ class LibraryNotifier extends AsyncNotifier<LibraryState> {
       return LibraryState(items: await db.savedUrls(_userId), sort: 'newest');
     }
     // Show cached items immediately, then sync behind them. A failure here
-    // (e.g. offline) is silent — the cached library is still usable and the
-    // reload button surfaces the error if the user retries.
-    unawaited(Future(() => sync().catchError((_) {})));
+    // is silent — the cached library is still usable and the reload button
+    // surfaces the error if the user retries. Offline there's nothing to
+    // sync with; AppShell triggers a sync once the network returns.
+    if (!OfflineMode.isOffline) {
+      unawaited(Future(() => sync().catchError((_) {})));
+    }
     return LibraryState(items: cached, sort: 'newest');
   }
 

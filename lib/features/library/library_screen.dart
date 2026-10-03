@@ -15,6 +15,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/api/api_exception.dart';
+import '../../core/connectivity/offline_mode.dart';
 import '../../core/localization/app_strings.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_view.dart';
@@ -35,7 +36,13 @@ class LibraryScreen extends ConsumerWidget {
     } on ApiException catch (e) {
       if (context.mounted) {
         ShadToaster.of(context).show(
-          ShadToast.destructive(description: Text(e.message)),
+          ShadToast.destructive(
+            description: Text(
+              e.isNetworkError && OfflineMode.isOffline
+                  ? AppStrings.of(context).offlineMessage
+                  : e.message,
+            ),
+          ),
         );
       }
     }

@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart' show Scaffold, AppBar, ListView, ListTile, ThemeMode;
+import 'package:flutter/material.dart'
+    show Scaffold, AppBar, ListView, ListTile, ThemeMode, showLicensePage;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/auth/clerk_token_provider.dart';
@@ -8,6 +10,7 @@ import '../../core/localization/app_strings.dart';
 import '../../core/theme/theme_mode_provider.dart';
 import '../../models/user_me.dart';
 import '../../widgets/error_view.dart';
+import '../../widgets/launch_view.dart';
 import '../../widgets/loading_view.dart';
 import 'settings_providers.dart';
 
@@ -170,6 +173,9 @@ class _SettingsBody extends ConsumerWidget {
               notifier.updatePreferences(notifyWeeklyStats: checked),
         ),
         const ShadSeparator.horizontal(),
+        _SectionHeader(s.aboutSection),
+        const _LicensesTile(),
+        const ShadSeparator.horizontal(),
         Padding(
           padding: const EdgeInsets.all(16),
           child: ShadButton.outline(
@@ -180,6 +186,50 @@ class _SettingsBody extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Opens Flutter's built-in license page, which lists the license of every
+/// package bundled into the app (collected by the framework's
+/// `LicenseRegistry` at build time, so it never goes stale).
+class _LicensesTile extends StatefulWidget {
+  const _LicensesTile();
+
+  @override
+  State<_LicensesTile> createState() => _LicensesTileState();
+}
+
+class _LicensesTileState extends State<_LicensesTile> {
+  String? _version;
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _version = info.version);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final version = _version;
+    return ListTile(
+      leading: const Icon(LucideIcons.scrollText),
+      title: Text(s.licenses),
+      subtitle: version == null ? null : Text(s.versionLabel(version)),
+      trailing: const Icon(LucideIcons.chevronRight),
+      onTap: () => showLicensePage(
+        context: context,
+        useRootNavigator: true,
+        applicationName: 'Hazy',
+        applicationVersion: version,
+        applicationIcon: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Image.asset(LaunchView.logoAsset, width: 64, height: 64),
+        ),
+      ),
     );
   }
 }

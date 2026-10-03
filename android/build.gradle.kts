@@ -26,8 +26,19 @@ subprojects {
     afterEvaluate {
         afterEvaluate {
             tasks.withType<JavaCompile>().configureEach {
-                sourceCompatibility = "17"
-                targetCompatibility = "17"
+                // Only raise modules that already target Java 9+. For a
+                // Java 8 module AGP passes the Android SDK as
+                // `-bootclasspath`, which javac ignores once the source
+                // level is 9+ — every `android.*` import then fails
+                // ("package android.app does not exist", seen with
+                // flutter_keyboard_visibility_temp_fork). Such modules are
+                // Java-only in practice, so there is no Kotlin target for
+                // them to disagree with.
+                val declared = JavaVersion.toVersion(sourceCompatibility)
+                if (declared >= JavaVersion.VERSION_1_9) {
+                    sourceCompatibility = "17"
+                    targetCompatibility = "17"
+                }
             }
             tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
                 compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)

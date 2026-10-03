@@ -77,6 +77,21 @@ class LocalDatabase {
         .toList();
   }
 
+  Future<SavedUrl?> savedUrl(String userId, String id) async {
+    final db = await _database;
+    final rows = await db.query(
+      _table,
+      columns: ['json'],
+      where: 'user_id = ? AND id = ?',
+      whereArgs: [userId, id],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return SavedUrl.fromJson(
+      jsonDecode(rows.single['json'] as String) as Map<String, dynamic>,
+    );
+  }
+
   Future<void> upsertSavedUrl(String userId, SavedUrl item) async {
     final db = await _database;
     await db.insert(
