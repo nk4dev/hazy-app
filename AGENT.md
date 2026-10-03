@@ -142,6 +142,17 @@ Features, matching the backend brief's suggested build order: `auth`,
   that envelope, never on HTTP status alone, and throws `ApiException`
   (see `lib/core/api/api_exception.dart`) so UI code never touches
   `DioException` directly.
+- **Library is served from a local SQLite cache.**
+  `lib/core/db/local_database.dart` (`sqflite`) mirrors `GET /items` per
+  Clerk user id, storing each `SavedUrlDTO` as JSON. `LibraryNotifier`
+  reads from it, and `sync()` pulls every page from the server and
+  replaces the user's rows — run automatically when the app opens and from
+  the Library reload button / pull-to-refresh. It is a cache only: every
+  local write follows a successful API call (save, edit, refetch,
+  summarize, delete), there is no offline write queue, and sorting is done
+  locally. Cold start offline still stops at the Clerk splash screen, so
+  the cache is only visible offline once the app is already open.
+  `test/local_database_test.dart` covers it via `sqflite_common_ffi`.
 - **Android-only share sheet for now.** `lib/features/share_intake` +
   the `AndroidManifest.xml` `SEND`/`text/plain` intent-filter let other
   apps share a URL into Hazy's save flow. No iOS Share Extension yet — that

@@ -35,6 +35,10 @@ class ClerkAuthBridge {
 
   static bool get isSignedIn => _state?.isSignedIn ?? false;
 
+  /// The signed-in Clerk user's id, used to scope the local SQLite cache
+  /// per account. `null` when signed out.
+  static String? get userId => _state?.user?.id;
+
   /// Forces an immediate retry of Clerk's environment/client fetch, for a
   /// manual "Retry" action on [SplashScreen] — the SDK already retries this
   /// on its own every 10s, but that's a long wait to sit through silently

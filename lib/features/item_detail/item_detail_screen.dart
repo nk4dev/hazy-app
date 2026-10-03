@@ -10,7 +10,6 @@ import '../../core/localization/app_strings.dart';
 import '../../models/saved_url.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/loading_view.dart';
-import '../library/library_providers.dart';
 import 'add_to_collection_sheet.dart';
 import 'item_detail_providers.dart';
 
@@ -58,7 +57,6 @@ class ItemDetailScreen extends ConsumerWidget {
               final confirmed = await _confirmDelete(context);
               if (confirmed != true) return;
               await ref.read(itemDetailProvider(itemId).notifier).delete();
-              ref.invalidate(libraryProvider);
               if (context.mounted) context.pop();
             },
           ),

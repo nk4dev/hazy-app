@@ -70,6 +70,27 @@ class SavedUrl {
     );
   }
 
+  /// Inverse of [SavedUrl.fromJson] — the same `SavedUrlDTO` shape the API
+  /// returns, used to persist items in the local SQLite cache.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'url': url,
+        'domain': domain,
+        'title': title,
+        'description': description,
+        'faviconUrl': faviconUrl,
+        'ogImageUrl': ogImageUrl,
+        'summary': summary,
+        'tags': tags,
+        'contentLanguage': contentLanguage,
+        'estimatedReadMinutes': estimatedReadMinutes,
+        'fetchStatus': fetchStatus.name,
+        'fetchError': fetchError,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+        'readLaterStatus': readLaterStatus?.toJson(),
+      };
+
   final String id;
   final String url;
   final String? domain;

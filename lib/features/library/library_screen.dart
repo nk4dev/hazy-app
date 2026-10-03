@@ -6,6 +6,7 @@ import 'package:flutter/material.dart'
         DismissDirection,
         RefreshIndicator,
         ListView,
+        AlwaysScrollableScrollPhysics,
         FloatingActionButton,
         CircularProgressIndicator;
 import 'package:flutter/widgets.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../core/api/api_exception.dart';
 import '../../core/localization/app_strings.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_view.dart';
@@ -21,33 +23,22 @@ import '../../widgets/saved_url_card.dart';
 import 'library_providers.dart';
 import 'save_url_dialog.dart';
 
-class LibraryScreen extends ConsumerStatefulWidget {
+class LibraryScreen extends ConsumerWidget {
   const LibraryScreen({super.key});
 
-  @override
-  ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
-}
-
-class _LibraryScreenState extends ConsumerState<LibraryScreen> {
-  final _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >
-        _scrollController.position.maxScrollExtent - 200) {
-      ref.read(libraryProvider.notifier).loadMore();
+  /// Syncs the local database with the server; the list stays on screen
+  /// throughout, so a failure is reported as a toast rather than replacing
+  /// the cached items with an error view.
+  Future<void> _sync(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(libraryProvider.notifier).sync();
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        ShadToaster.of(context).show(
+          ShadToast.destructive(description: Text(e.message)),
+        );
+      }
     }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
   }
 
   Future<bool?> _confirmDelete(BuildContext context) {
@@ -71,8 +62,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(libraryProvider);
+    final isSyncing = state.isLoading || (state.value?.isSyncing ?? false);
     final theme = ShadTheme.of(context);
     final s = AppStrings.of(context);
     final sortOptions = {'newest': s.sortNewest, 'oldest': s.sortOldest};
@@ -81,6 +73,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       appBar: AppBar(
         title: Text(s.libraryTitle),
         actions: [
+          ShadIconButton.ghost(
+            icon: isSyncing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(LucideIcons.refreshCw),
+            onPressed: isSyncing ? null : () => _sync(context, ref),
+          ),
           ShadIconButton.ghost(
             icon: const Icon(LucideIcons.folder),
             onPressed: () => context.push('/library/collections'),
@@ -122,17 +124,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: () => ref.read(libraryProvider.notifier).refresh(),
+                onRefresh: () => _sync(context, ref),
                 child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: value.items.length + (value.nextCursor != null ? 1 : 0),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: value.items.length,
                   itemBuilder: (context, index) {
-                    if (index >= value.items.length) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
                     final item = value.items[index];
                     return Dismissible(
                       key: ValueKey(item.id),
