@@ -9,6 +9,7 @@ import '../../models/read_later.dart';
 import '../../models/saved_url.dart';
 import '../../models/user_me.dart';
 import '../config/app_config.dart';
+import '../connectivity/offline_mode.dart';
 import 'api_exception.dart';
 
 /// Thin wrapper over `/v1/**` (see docs/ai/make-flutter-app.md in the
@@ -29,6 +30,18 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // Known to be offline: fail straight away rather than waiting
+          // out token-refresh retries and the connect timeout, so screens
+          // show their offline state immediately.
+          if (OfflineMode.isOffline) {
+            return handler.reject(
+              DioException(
+                requestOptions: options,
+                type: DioExceptionType.connectionError,
+                error: ApiException.offline(),
+              ),
+            );
+          }
           final token = await _getToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
@@ -47,6 +60,7 @@ class ApiClient {
     try {
       response = await request;
     } on DioException catch (e) {
+      if (e.error case final ApiException offline) throw offline;
       final data = e.response?.data;
       if (data is Map<String, dynamic> && data['error'] is Map) {
         throw _errorFrom(data, e.response?.statusCode);
@@ -150,6 +164,7 @@ class ApiClient {
       );
       return response.data!;
     } on DioException catch (e) {
+      if (e.error case final ApiException offline) throw offline;
       final data = e.response?.data;
       Map<String, dynamic>? envelope;
       if (data is Map<String, dynamic>) {

@@ -32,6 +32,34 @@ abstract class AppStrings {
   // Bottom navigation
   String get navLibrary;
   String get navReadLater;
+
+  // Notes (hazy note)
+  String get navNotes;
+  String get notesTitle;
+  String get emptyNotesTitle;
+  String get emptyNotesSubtitle;
+  String get newNote;
+  String get untitledNote;
+  String get noteStatusDraft;
+  String get noteStatusDone;
+  String get noteTitlePlaceholder;
+  String get noteBodyPlaceholder;
+  String get addTag;
+  String get tagPlaceholder;
+  String get add;
+  String get noProject;
+  String get noteSaving;
+  String get noteSaved;
+  String get noteSaveFailed;
+  String get noteUnsavedDraft;
+  String get deleteNoteConfirmTitle;
+  String get noteDetails;
+  String get suggestionsTitle;
+  String get noSuggestions;
+  String get suggestionAccept;
+  String get suggestionDismiss;
+  String get sourcesTitle;
+  String get noSourcesYet;
   String get navSearch;
   String get navAsk;
   String get navSettings;
@@ -82,6 +110,9 @@ abstract class AppStrings {
   String get weeklyStats;
   String get notYetSent;
   String get signOut;
+  String get aboutSection;
+  String get licenses;
+  String versionLabel(String version);
 
   // Read later
   String get readLaterTitle;
@@ -141,6 +172,11 @@ abstract class AppStrings {
 
   // Splash / connection trouble
   String get connectionTroubleTitle;
+  String get continueOffline;
+  String get offlineBanner;
+  String get offlineMessage;
+  String get offlineNoCacheTitle;
+  String get offlineNoCacheSubtitle;
   String get connectionTroubleSubtitle;
 }
 
@@ -164,6 +200,58 @@ class EnStrings extends AppStrings {
   String get navLibrary => 'Library';
   @override
   String get navReadLater => 'Read later';
+  @override
+  String get navNotes => "Notes";
+  @override
+  String get notesTitle => "Notes";
+  @override
+  String get emptyNotesTitle => "No notes yet";
+  @override
+  String get emptyNotesSubtitle => "Put what you saved into your own words.";
+  @override
+  String get newNote => "New note";
+  @override
+  String get untitledNote => "Untitled note";
+  @override
+  String get noteStatusDraft => "Draft";
+  @override
+  String get noteStatusDone => "Done";
+  @override
+  String get noteTitlePlaceholder => "Title";
+  @override
+  String get noteBodyPlaceholder => "Start writing… Type @ to cite a saved link.";
+  @override
+  String get addTag => "Add tag";
+  @override
+  String get tagPlaceholder => "Tag";
+  @override
+  String get add => "Add";
+  @override
+  String get noProject => "No project";
+  @override
+  String get noteSaving => "Saving…";
+  @override
+  String get noteSaved => "Saved";
+  @override
+  String get noteSaveFailed => "Couldn't save";
+  @override
+  String get noteUnsavedDraft => "Saves when you start writing";
+  @override
+  String get deleteNoteConfirmTitle => "Delete this note?";
+  @override
+  String get noteDetails => "Suggestions and sources";
+  @override
+  String get suggestionsTitle => "Suggestions";
+  @override
+  String get noSuggestions => "No suggestions right now.";
+  @override
+  String get suggestionAccept => "Use in note";
+  @override
+  String get suggestionDismiss => "Dismiss";
+  @override
+  String get sourcesTitle => "Sources";
+  @override
+  String get noSourcesYet => "No sources yet. Type @ in the note to cite a saved link.";
   @override
   String get navSearch => 'Search';
   @override
@@ -254,6 +342,12 @@ class EnStrings extends AppStrings {
   String get notYetSent => 'Not yet sent — no push notifications configured.';
   @override
   String get signOut => 'Sign out';
+  @override
+  String get aboutSection => 'About';
+  @override
+  String get licenses => 'Open source licenses';
+  @override
+  String versionLabel(String version) => 'Version $version';
 
   @override
   String get readLaterTitle => 'Read later';
@@ -353,6 +447,18 @@ class EnStrings extends AppStrings {
   @override
   String get connectionTroubleTitle => "Can't connect right now";
   @override
+  String get continueOffline => 'Continue offline';
+  @override
+  String get offlineBanner => "You're offline — showing saved items";
+  @override
+  String get offlineMessage =>
+      "You're offline. Connect to the internet and try again.";
+  @override
+  String get offlineNoCacheTitle => "You're offline";
+  @override
+  String get offlineNoCacheSubtitle =>
+      'Connect to the internet to sign in to Hazy.';
+  @override
   String get connectionTroubleSubtitle =>
       "We're having trouble reaching Hazy. Check your connection and try again.";
 }
@@ -377,6 +483,58 @@ class JaStrings extends AppStrings {
   String get navLibrary => 'ライブラリ';
   @override
   String get navReadLater => 'あとで読む';
+  @override
+  String get navNotes => "ノート";
+  @override
+  String get notesTitle => "ノート";
+  @override
+  String get emptyNotesTitle => "まだノートがありません";
+  @override
+  String get emptyNotesSubtitle => "保存したものを、自分の言葉で書いてみましょう。";
+  @override
+  String get newNote => "新しいノート";
+  @override
+  String get untitledNote => "無題のノート";
+  @override
+  String get noteStatusDraft => "下書き";
+  @override
+  String get noteStatusDone => "完了";
+  @override
+  String get noteTitlePlaceholder => "タイトル";
+  @override
+  String get noteBodyPlaceholder => "書き始めましょう… @ で保存済みのリンクを引用できます。";
+  @override
+  String get addTag => "タグを追加";
+  @override
+  String get tagPlaceholder => "タグ";
+  @override
+  String get add => "追加";
+  @override
+  String get noProject => "プロジェクトなし";
+  @override
+  String get noteSaving => "保存中…";
+  @override
+  String get noteSaved => "保存済み";
+  @override
+  String get noteSaveFailed => "保存できませんでした";
+  @override
+  String get noteUnsavedDraft => "書き始めると保存されます";
+  @override
+  String get deleteNoteConfirmTitle => "このノートを削除しますか？";
+  @override
+  String get noteDetails => "提案と出典";
+  @override
+  String get suggestionsTitle => "AI の提案";
+  @override
+  String get noSuggestions => "いまは提案がありません。";
+  @override
+  String get suggestionAccept => "本文に採る";
+  @override
+  String get suggestionDismiss => "消す";
+  @override
+  String get sourcesTitle => "出典";
+  @override
+  String get noSourcesYet => "まだ出典はありません。本文で @ を入力すると保存済みのリンクを引用できます。";
   @override
   String get navSearch => '検索';
   @override
@@ -467,6 +625,12 @@ class JaStrings extends AppStrings {
   String get notYetSent => 'まだ送信されていません — プッシュ通知は未設定です。';
   @override
   String get signOut => 'サインアウト';
+  @override
+  String get aboutSection => 'このアプリについて';
+  @override
+  String get licenses => 'オープンソースライセンス';
+  @override
+  String versionLabel(String version) => 'バージョン $version';
 
   @override
   String get readLaterTitle => 'あとで読む';
@@ -564,6 +728,16 @@ class JaStrings extends AppStrings {
 
   @override
   String get connectionTroubleTitle => '接続できません';
+  @override
+  String get continueOffline => 'オフラインで続ける';
+  @override
+  String get offlineBanner => 'オフラインです — 保存済みの項目を表示しています';
+  @override
+  String get offlineMessage => 'オフラインです。インターネットに接続してもう一度お試しください。';
+  @override
+  String get offlineNoCacheTitle => 'オフラインです';
+  @override
+  String get offlineNoCacheSubtitle => 'Hazy にサインインするにはインターネットに接続してください。';
   @override
   String get connectionTroubleSubtitle =>
       'Hazyへの接続に問題が発生しています。ネットワーク接続を確認してもう一度お試しください。';

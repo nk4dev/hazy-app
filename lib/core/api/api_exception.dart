@@ -19,11 +19,21 @@ class ApiException implements Exception {
         message: message,
       );
 
+  /// The request was never sent because the device is known to be offline
+  /// (see `OfflineMode`). A client-side code, not part of the backend
+  /// contract.
+  factory ApiException.offline() => const ApiException(
+        code: 'offline',
+        message: 'You are offline.',
+      );
+
   final String code;
   final String message;
   final Map<String, dynamic>? details;
   final int? httpStatus;
 
+  bool get isOffline => code == 'offline';
+  bool get isNetworkError => code == 'network_error' || isOffline;
   bool get isUnauthorized => code == 'unauthorized';
   bool get isNotFound => code == 'not_found';
   bool get isValidationError => code == 'validation_error';

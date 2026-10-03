@@ -14,6 +14,13 @@ class AppConfig {
     defaultValue: 'http://10.0.2.2:8787/v1',
   );
 
+  /// Base URL for hazy note's own `/api` routes (the `apps/hazy-note` web
+  /// app), used for notes — see `NoteApiClient`.
+  static const String noteApiBaseUrl = String.fromEnvironment(
+    'HAZY_NOTE_API_BASE_URL',
+    defaultValue: 'https://note.hz.nknighta.me/api',
+  );
+
   /// Clerk publishable key for this project's Clerk instance.
   static const String clerkPublishableKey = String.fromEnvironment(
     'CLERK_PUBLISHABLE_KEY',

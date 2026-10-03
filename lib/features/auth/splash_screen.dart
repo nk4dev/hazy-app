@@ -5,17 +5,23 @@ import 'package:flutter/widgets.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/auth/clerk_token_provider.dart';
+import '../../core/connectivity/offline_mode.dart';
 import '../../core/localization/app_strings.dart';
-import '../../widgets/loading_view.dart';
+import '../../widgets/launch_view.dart';
 
 /// Shown at `/splash` while Clerk's SDK fetches its environment/client
 /// (see [ClerkAuthBridge.maybeState]) — go_router's redirect moves away
 /// from this route automatically once that resolves.
 ///
+/// Shows [LaunchView] while that happens — the same widget `ClerkAuth`
+/// shows before this route exists, so launch reads as one loading screen.
+///
 /// The SDK retries a failed fetch on its own every 10s, but sitting on a
 /// bare spinner with no feedback for a network blip is a bad experience,
-/// so after a timeout this surfaces a retry affordance instead of hanging
-/// forever with no explanation.
+/// so after a timeout — or immediately if the device is offline — this
+/// surfaces a retry affordance instead of hanging forever with no
+/// explanation. A device that is offline with a previously signed-in user
+/// never lingers here: the router sends it straight to the cached library.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -33,7 +39,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    OfflineMode.listenable.addListener(_onOfflineChanged);
     _armTimer();
+  }
+
+  void _onOfflineChanged() {
+    if (mounted) setState(() {});
   }
 
   void _armTimer() {
@@ -54,19 +65,26 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void dispose() {
+    OfflineMode.listenable.removeListener(_onOfflineChanged);
     _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_timedOut) {
-      return const Scaffold(body: LoadingView());
-    }
-
     final theme = ShadTheme.of(context);
     final s = AppStrings.of(context);
+    final isOffline = OfflineMode.isOffline;
+
+    if (!_timedOut && !isOffline) {
+      return LaunchView(background: theme.colorScheme.background);
+    }
+
+    // Offline with nobody remembered on this device: there's no cached
+    // library to fall back to, so say so plainly.
+    final canContinueOffline = !isOffline && ClerkAuthBridge.userId != null;
     return Scaffold(
+      backgroundColor: theme.colorScheme.background,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -75,10 +93,14 @@ class _SplashScreenState extends State<SplashScreen> {
             children: [
               Icon(LucideIcons.wifiOff, size: 40, color: theme.colorScheme.mutedForeground),
               const SizedBox(height: 16),
-              Text(s.connectionTroubleTitle, style: theme.textTheme.h4, textAlign: TextAlign.center),
+              Text(
+                isOffline ? s.offlineNoCacheTitle : s.connectionTroubleTitle,
+                style: theme.textTheme.h4,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 8),
               Text(
-                s.connectionTroubleSubtitle,
+                isOffline ? s.offlineNoCacheSubtitle : s.connectionTroubleSubtitle,
                 style: theme.textTheme.muted,
                 textAlign: TextAlign.center,
               ),
@@ -90,6 +112,13 @@ class _SplashScreenState extends State<SplashScreen> {
                     : const Icon(LucideIcons.refreshCw),
                 child: Text(s.retry),
               ),
+              if (canContinueOffline) ...[
+                const SizedBox(height: 8),
+                ShadButton.outline(
+                  onPressed: OfflineMode.enterManually,
+                  child: Text(s.continueOffline),
+                ),
+              ],
             ],
           ),
         ),
